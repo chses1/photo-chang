@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>個人專屬 - 新海誠風格 AI 插畫生成器</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background: linear-gradient(135deg, #060b14 0%, #0c1524 100%);
+            color: #f3f4f6;
+            min-height: 100vh;
+        }
+        .gemini-glow { box-shadow: 0 0 25px rgba(56, 189, 248, 0.2); }
+        .sky-bg { background: linear-gradient(to bottom, #111827, #030712); }
+        input[type="range"] {
+            -webkit-appearance: none; appearance: none; background: #1e293b; height: 0.375rem; border-radius: 9999px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none; width: 14px; height: 14px;
+            border-radius: 50%; background: #38bdf8; cursor: pointer; box-shadow: 0 0 8px #38bdf8;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-8 text-center border-b border-slate-800 pb-6">
+            <div class="inline-block px-3 py-1 bg-sky-500/10 text-sky-400 text-xs rounded-full font-mono mb-2 border border-sky-500/20">Gemini 2.5 Flash Image Edition</div>
+            <h1 class="text-3xl font-bold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-indigo-300 to-purple-400">
+                新海誠風格 AI 插畫生成器 (個人專屬版)
+            </h1>
+            <p class="text-slate-400 mt-2 text-xs md:text-sm">
+                直接呼叫您的 Google AI Studio 權杖。照片本機處理，直接向 Google API 發送請求，安全且隱密。
+            </p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div class="lg:col-span-5 space-y-5 bg-slate-900/80 p-5 rounded-2xl border border-slate-800/80 backdrop-blur-md gemini-glow">
+                
+                <div class="border-b border-slate-800 pb-4">
+                    <label class="block text-xs font-medium text-sky-400 mb-1.5 flex items-center justify-between">
+                        <span>Google Gemini API Key</span>
+                        <a href="https://aistudio.google.com/" target="_blank" class="text-[11px] text-slate-500 hover:text-sky-400 underline">獲取金鑰 →</a>
+                    </label>
+                    <input type="password" id="gemini-key" placeholder="AIzaSy..." 
+                           class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs focus:outline-none focus:border-sky-500 text-slate-200">
+                    <p class="text-[10px] text-slate-500 mt-1">金鑰僅存於瀏覽器 LocalStorage 中，Commit 到 GitHub 也不會洩漏。</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1.5">1. 上傳來源人物相片</label>
+                    <div class="border border-dashed border-slate-700 hover:border-sky-500 rounded-xl p-4 text-center cursor-pointer transition-colors bg-slate-950/40 relative min-h-[110px] flex flex-col justify-center items-center">
+                        <input type="file" id="photo-input" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                        <div id="upload-hint" class="space-y-1">
+                            <p class="text-xs text-slate-300 font-medium">點擊或拖曳影像至此</p>
+                            <p class="text-[11px] text-slate-500">支援常見點陣圖格式</p>
+                        </div>
+                        <img id="source-preview" src="#" alt="預覽" class="hidden max-h-32 object-contain rounded border border-slate-800">
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <label class="block text-xs font-medium text-slate-300">2. 特徵融合度調整</label>
+                    <div>
+                        <div class="flex justify-between text-[11px] text-slate-400 mb-0.5"><span>面部精細度</span><span id="v-face">75%</span></div>
+                        <input type="range" id="w-face" min="50" max="100" value="75" class="w-full" oninput="document.getElementById('v-face').innerText = this.value + '%'">
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[11px] text-slate-400 mb-0.5"><span>衣著與色彩保留</span><span id="v-cloth">70%</span></div>
+                        <input type="range" id="w-cloth" min="30" max="100" value="70" class="w-full" oninput="document.getElementById('v-cloth').innerText = this.value + '%'">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">3. 新海誠風格場景</label>
+                        <select id="sel-scene" class="w-full px-2 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-300 focus:outline-none">
+                            <option value="Taoyuan classic local city street background with beautiful electric poles and power lines">桃園經典街景與電線杆</option>
+                            <option value="Nankan River bicycle path background with stunning pink cherry blossom trees">南崁溪自行車道與櫻花</option>
+                            <option value="Beautiful elementary school campus background with green grass field and classroom windows">校園綠意與教室窗景</option>
+                            <option value="Epic Lala mountain giant tree forest landscape background">拉拉山巨木與壯麗群山</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">4. 天空與光影時間</label>
+                        <select id="sel-light" class="w-full px-2 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-300 focus:outline-none">
+                            <option value="breathtaking golden hour sunset landscape, warm orange light beam">黃昏魔幻時刻 (Sunset)</option>
+                            <option value="vibrant summer clear blue sky with massive anime cumulus clouds">盛夏烈日晴空與積雨雲</option>
+                            <option value="romantic deep twilight night sky with a shining passing comet and stars">璀璨星空與幻化彗星</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button id="btn-draw" onclick="runGeminiWorkflow()" 
+                        class="w-full py-2.5 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-medium text-xs rounded-xl transition-all cursor-pointer flex items-center justify-center space-x-1.5">
+                    <span>開始運算並生成</span>
+                </button>
+            </div>
+
+            <div class="lg:col-span-7 flex flex-col justify-between space-y-4 bg-slate-900/30 p-5 rounded-2xl border border-slate-800/60 backdrop-blur-md min-h-[400px]">
+                <div class="w-full h-full flex flex-col justify-center items-center sky-bg rounded-xl border border-slate-800 p-4 relative overflow-hidden min-h-[320px]">
+                    
+                    <div id="loader" class="hidden text-center space-y-3 z-10">
+                        <div class="mx-auto h-10 w-10 border-4 border-sky-400/20 border-t-sky-400 rounded-full animate-spin"></div>
+                        <p class="text-xs text-sky-400 font-medium animate-pulse">正在透過 Gemini 多模態網絡渲染新海誠美學...</p>
+                    </div>
+
+                    <div id="status-text" class="text-slate-500 text-xs text-center z-10">
+                        <p class="font-medium text-slate-400">生成的唯美插畫將輸出在此處</p>
+                    </div>
+
+                    <img id="out-img" src="#" alt="輸出結果" class="hidden max-h-[450px] w-auto object-contain rounded-lg shadow-2xl z-10">
+                </div>
+
+                <div class="flex space-x-3">
+                    <button id="btn-dl" onclick="saveImage()" disabled class="flex-1 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 text-xs font-medium rounded-lg transition-colors cursor-pointer">下載影像</button>
+                    <button onclick="location.reload()" class="px-3 py-2 bg-slate-950 border border-slate-800 text-slate-400 hover:text-slate-200 text-xs rounded-lg transition-colors">清空重來</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 自動載入已存金鑰
+        document.addEventListener('DOMContentLoaded', () => {
+            const k = localStorage.getItem('g_key');
+            if (k) document.getElementById('gemini-key').value = k;
+        });
+
+        // 預覽上傳圖
+        document.getElementById('photo-input').addEventListener('change', function(e) {
+            const f = e.target.files[0];
+            if (f) {
+                const r = new FileReader();
+                r.onload = function(ev) {
+                    document.getElementById('upload-hint').classList.add('hidden');
+                    const img = document.getElementById('source-preview');
+                    img.src = ev.target.result;
+                    img.classList.remove('hidden');
+                }
+                r.readAsDataURL(f);
+            }
+        });
+
+        // 執行主程序
+        async function runGeminiWorkflow() {
+            const key = document.getElementById('gemini-key').value.trim();
+            const file = document.getElementById('photo-input').files[0];
+            if (!key || !file) return alert('請確認已填入 Gemini Key 並上傳相片！');
+
+            localStorage.setItem('g_key', key);
+            toggleUI(true);
+
+            try {
+                const base64Str = await file2Base64(file);
+                const pureBase64 = base64Str.split(',')[1];
+                const mimeType = base64Str.split(',')[0].split(';')[0].split(':')[1];
+
+                const scene = document.getElementById('sel-scene').value;
+                const light = document.getElementById('sel-light').value;
+                const fW = document.getElementById('w-face').value;
+                const cW = document.getElementById('w-cloth').value;
+
+                // 架構多模態提示詞
+                const promptText = `You are an elite anime artist. Analyze this person's face structure, hairstyle, expression, and clothing colors/style. 
+                Generate a breathtaking, ultra-detailed Shinkai Makoto style anime illustration based on these features.
+                Maintain face features with ${fW}% fidelity and clothing with ${cW}% fidelity.
+                Set the background scene in: ${scene}.
+                The atmosphere and lighting condition must be: ${light}.
+                Return ONLY the generated image output directly.`;
+
+                // 呼叫 Gemini Image Generation 端點
+                const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent';
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-goog-api-key': key
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [
+                                { text: promptText },
+                                { inlineData: { mimeType: mimeType, data: pureBase64 } }
+                            ]
+                        }],
+                        generationConfig: {
+                            responseModalities: ['TEXT', 'IMAGE']
+                        }
+                    })
+                });
+
+                const data = await res.json();
+                if (!res.ok) {
+                    const message = data?.error?.message || `API 回應失敗，代碼: ${res.status}`;
+                    throw new Error(message);
+                }
+
+                const parts = data?.candidates?.[0]?.content?.parts || [];
+                const imagePart = parts.find(part => part.inlineData?.data);
+                const textPart = parts.find(part => part.text)?.text;
+
+                if (!imagePart) {
+                    throw new Error(textPart || 'Gemini 沒有回傳圖片，請稍後重試或調整提示詞。');
+                }
+
+                const out = document.getElementById('out-img');
+                const outputMimeType = imagePart.inlineData.mimeType || 'image/png';
+                out.src = `data:${outputMimeType};base64,${imagePart.inlineData.data}`;
+                out.classList.remove('hidden');
+                document.getElementById('status-text').classList.add('hidden');
+                document.getElementById('btn-dl').disabled = false;
+                toggleUI(false);
+
+            } catch (err) {
+                alert(`運算發生問題: ${err.message}`);
+                toggleUI(false);
+            }
+        }
+
+        function file2Base64(f) {
+            return new Promise((res, rej) => {
+                const r = new FileReader();
+                r.onload = () => res(r.result);
+                r.onerror = e => rej(e);
+                r.readAsDataURL(f);
+            });
+        }
+
+        function toggleUI(load) {
+            document.getElementById('loader').classList.toggle('hidden', !load);
+            if(load) document.getElementById('status-text').classList.add('hidden');
+            document.getElementById('btn-draw').disabled = load;
+            document.getElementById('btn-draw').classList.toggle('opacity-50', load);
+        }
+
+        function saveImage() {
+            const img = document.getElementById('out-img');
+            const a = document.createElement('a');
+            a.href = img.src; a.download = `gemini_shinkai_art_${Date.now()}.png`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        }
+    </script>
+</body>
+</html>
